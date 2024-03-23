@@ -1,6 +1,6 @@
 import cv2 as cv
 
-from regions import FieldMaker, Region
+from regions import Field, Region
 
 lon = 58.0, 70.0
 lat = 58.0, 67.0
@@ -13,7 +13,7 @@ reg1 = Region(
 )
 
 if __name__ == "__main__":
-    field_maker = FieldMaker(lat, lon)
+    field_maker = Field(lat, lon)
 
     field_maker.addGrid()
     field_maker.addRegion(reg1)
@@ -28,4 +28,3 @@ if __name__ == "__main__":
     
     # cv.waitKey(0)
     # cv.destroyAllWindows() 
-    
