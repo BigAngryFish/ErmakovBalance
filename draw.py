@@ -4,18 +4,11 @@ from math import sqrt
 
 from dataclasses import dataclass
 
-@dataclass
-class Region:
-    """Класс для хранения координат региона"""
-    lat_min: float
-    lat_max: float
-    lon_max: float
-    lon_min: float
-
+from data_processing import Region
 
 class Field():
 
-    def __init__(self, lat: tuple, lon: tuple) -> None:
+    def __init__(self, region: Region) -> None:
         
         self.pixcel_step = 100
         self.grid_step = 1
@@ -23,11 +16,11 @@ class Field():
         self.height: int
         self.width: int
 
-        self.lat = lat
-        self.lon = lon
+        self.lat = region.down, region.up
+        self.lon = region.left, region.right
 
-        self.lat_steps = self.calcSteps(lat)
-        self.lon_steps = self.calcSteps(lon)
+        self.lat_steps = self.calcSteps(self.lat)
+        self.lon_steps = self.calcSteps(self.lon)
 
         self.field = self.createField()
 
@@ -53,11 +46,10 @@ class Field():
         self.field = grid_drawer.drawGrid()
         return self.field
     
-    def addRegion(self, region: Region) -> np.ndarray:
+    def addRegion(self, region: Region, color: tuple = (255, 0, 0)) -> np.ndarray:
         """Добавление региона на поле"""
-
         drawer = RegionDrawer(self)
-        self.field = drawer.draw(self.field, region)
+        self.field = drawer.draw(self.field, region, color)
 
 
 
@@ -76,7 +68,7 @@ class GridDrawer():
         self.label_settings = (
             cv.FONT_HERSHEY_SIMPLEX, # font
             1,                       # fontScale
-            (0, 0, 0),             # color
+            (0, 0, 0),               # color
             2,                       # thickness
             cv.LINE_AA
         )
@@ -123,7 +115,7 @@ class GridDrawer():
 
         return img 
 
-    def drawHorGrid(self, field: np.ndarray, min_value: float, step: int, length) -> np.array:
+    def drawHorGrid(self, img: np.ndarray, min_value: float, step: int, length) -> np.array:
         y = self.field.height - self.field.pixcel_step * (2 + step)
         x1 = self.field.pixcel_step
         x2 = x1 + length
@@ -131,16 +123,16 @@ class GridDrawer():
         # draw line
         start_point = (x1, y)
         end_point = (x2, y)
-        cv.line(field, start_point, end_point, *self.draw_grid_settings)
+        cv.line(img, start_point, end_point, *self.draw_grid_settings)
 
         # draw label
         vert_shift = 30
         hor_shift = 0
         coords = (x2 + hor_shift, y + vert_shift)
         lon_value = str(round(min_value + step * self.field.grid_step, 2))
-        field = cv.putText(field, lon_value, coords, *self.label_settings)
+        img = cv.putText(img, lon_value, coords, *self.label_settings)
 
-        return field 
+        return img 
 
     def calcLineLength(self, coords: tuple) -> int:
         """Возвращает длину горизонтальной линии"""
@@ -158,7 +150,6 @@ class RegionDrawer():
 
         self.color: tuple = (0, 0, 255)
         self.thickness: int = 2
-        self.settings = (self.color, self.thickness)
 
     def latToPixcel(self, degree: float) -> int:
         step = (degree - self.field.lat[0]) / self.field.grid_step
@@ -171,17 +162,25 @@ class RegionDrawer():
         return pixcel
 
     def calcEdgePoints(self, region: Region) -> tuple:
-        """Рассчитывает краевые точки региона"""
-        start_x = int(self.lonToPixcel(region.lon_min))
-        end_x = int(self.lonToPixcel(region.lon_max))
-        start_y = self.field.height - int(self.latToPixcel(region.lat_min))
-        end_y = self.field.height - int(self.latToPixcel(region.lat_max))
+        """
+        Рассчитывает краевые точки региона
+        
+        :return: кортеж  с  краевыми точками региона вида  (start_point,  end_point), где
+            start_point - точка левого верхнего угла, end_point  -  точка правого нижнего
+            угла
+        """
+        start_x = int(self.lonToPixcel(region.left))
+        end_x = int(self.lonToPixcel(region.right))
+        start_y = self.field.height - int(self.latToPixcel(region.down))
+        end_y = self.field.height - int(self.latToPixcel(region.up))
 
         return (start_x, start_y), (end_x, end_y)
         
-    def draw(self, img: np.ndarray, region: Region) -> np.ndarray:
+    def draw(self, img: np.ndarray, region: Region, color: tuple = None) -> np.ndarray:
         """Отрисовывает регион и возвращает результат"""
         points = self.calcEdgePoints(region)
-        img = cv.rectangle(img, *points, *self.settings)
+
+        if color == None: color = self.color
+        img = cv.rectangle(img, *points, color, self.thickness)
 
         return img
