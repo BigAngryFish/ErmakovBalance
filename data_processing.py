@@ -12,7 +12,7 @@ class DataLoader():
 class Coordinates():
     """Класс для работы с координатами"""
 
-    def __init__(self, region: Region) -> None:
+    def __init__(self, region: Region, grid: Grid | None) -> None:
         """Инициализация"""
 
         # метров в одном градусе широты (по вертикали)
@@ -27,8 +27,8 @@ class Coordinates():
 
         self._region: Region = region
 
-        self._grid: Grid = self._getGrid()
-        self._id = self.getId(self._grid)
+        self._grid: Grid = grid if grid else self._calcGrid()
+        self._id: Id = self.getId(self._grid)
         self._grid_region: Region = self._getGridRegion()
         self._cell: Cell = self._getCell()
     
@@ -90,7 +90,7 @@ class Coordinates():
         id = Id(left=left, right=right, down=down, up=up)
         return id
     
-    def _getGrid(self) -> Grid:
+    def _calcGrid(self) -> Grid:
         """Рассчитывает сетку координат и возвращает результат"""
         STD_lons =  [
             (20.125 + X * 0.25) if X<640 else (20.125 + (X - 1440) * 0.25) for X in range(self.STD_WIDTH)
