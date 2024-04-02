@@ -118,16 +118,13 @@ class RegionProcessor():
         height = id.down - id.up + 1
         width = id.right - id.left + 1
 
-        areas = []
         up = grid_region.up
-    
-        # TODO: оптимизировать
-        for _ in range(height):
+        areas = np.zeros((height, width))
+        for row in range(height):
             cell_area = pow(CELL_LENGTH_METERS, 2) * self.calcLatCoef(abs(up))
-            row_areas = [cell_area] * width
-            areas.append(row_areas)
+            areas[row] += cell_area
             up -= 0.25
-        areas = np.array(areas)
+        # areas = np.array(areas)
     
         return areas
 
