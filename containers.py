@@ -67,3 +67,9 @@ class RegionData():
     id: Id
     cell: Cell
 
+
+@dataclass
+class Data():
+    target: np.ndarray
+    U: np.ndarray | None = None
+    V: np.ndarray | None = None
