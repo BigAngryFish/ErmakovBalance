@@ -51,6 +51,17 @@ class Cell:
 
 @dataclass
 class RegionData():
+    """
+    Контейнер для хранения координатных данных региона
+
+    Атрибуты:
+    ---------
+    region: Region
+    grid_region: Region
+    id: Id
+    cell: Cell
+    """
+
     region: Region
     grid_region: Region
     id: Id
