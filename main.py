@@ -21,7 +21,7 @@ def main():
     data = data_loader.data
 
     processor = RegionProcessor(REGION)
-    pwv_sum = processor.calcSum(data)
+    pwv_sum = processor.calcSum(data.target)
 
     print("sum: {:e}".format(pwv_sum))
 

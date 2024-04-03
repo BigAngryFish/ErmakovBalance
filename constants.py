@@ -3,6 +3,8 @@ LAT_DEGREE_LENGTH_METERS = 111 * 1e3
 
 # ячейки с шагом 0.25 градуса
 COEF = 4
+# длина стороны ячейки в градусах
+CELL_STEP = 0.25
 
 # длина широтной стороны ячейки
 CELL_LENGTH_METERS = LAT_DEGREE_LENGTH_METERS / COEF
