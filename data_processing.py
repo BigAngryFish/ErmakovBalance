@@ -124,7 +124,6 @@ class RegionProcessor():
             cell_area = pow(CELL_LENGTH_METERS, 2) * self.calcLatCoef(abs(up))
             areas[row] += cell_area
             up -= 0.25
-        # areas = np.array(areas)
     
         return areas
 
