@@ -5,7 +5,6 @@ from datetime import date, datetime
 from containers import *
 
 
-
 class DataLoader():
     """Класс для загрузки данных"""
 
@@ -23,44 +22,12 @@ class DataLoader():
         )
 
         self.region_id: Id = self.getDefaultRegionRange()
-        self.date_data: DateData = self.getDefaultDateRange()
-
-    @property
-    def convdata(self) -> ConvData:
-        """Возвращает извлеченные данные"""
-        return self.getRegionData()
+        self.original_dates: DateData = self.getDefaultDateRange()
     
     @property
     def timedim(self) -> int:
         """Возвращает количество единиц времени"""
-        return self.date_data.end_id - self.date_data.start_id + 1
-    
-    # def getRegionData(self) -> ConvData:
-    #     """Извлекает необходимые данные из БД"""
-
-    #     target: h5netcdf.Variable = self._db[self.target_name]
-    #     target_arr = target[
-    #         self.region_id.left : self.region_id.right + 1,
-    #         self.region_id.up : self.region_id.down + 1,
-    #         self.date_data.start_id : self.date_data.end_id,
-    #     ]
-
-    #     U: h5netcdf.Variable = self._db["U"]
-    #     U_arr = U[
-    #         self.region_id.left : self.region_id.right + 1,
-    #         self.region_id.up : self.region_id.down + 1,
-    #         self.date_data.start_id : self.date_data.end_id,
-    #     ]
-
-    #     V: h5netcdf.Variable = self._db["V"]
-    #     V_arr = V[
-    #         self.region_id.left : self.region_id.right + 1,
-    #         self.region_id.up : self.region_id.down + 1,
-    #         self.date_data.start_id : self.date_data.end_id,
-    #     ]
-
-    #     data = ConvData(target=target_arr, U=U_arr, V=V_arr)
-    #     return data
+        return self.original_dates.end_id - self.original_dates.start_id + 1
     
     def getTargetMap(self, day_id: int) -> np.ndarray:
         data_map = self._db[self.target_name][..., day_id]
@@ -71,39 +38,6 @@ class DataLoader():
     
     def getVMap(self, day_id: int) -> np.ndarray:
         return np.transpose(self._db["V"][..., day_id])
-    
-    # def getRegionDayData(self, day_id: int) -> ConvDayData:
-    #     """Извлекает необходимые данные из БД"""
-
-    #     target: h5netcdf.Variable = self._db[self.target_name]
-    #     target_arr = target[
-    #         self.region_id.left : self.region_id.right + 1,
-    #         self.region_id.up : self.region_id.down + 1,
-    #         day_id,
-    #     ]
-
-    #     U: h5netcdf.Variable = self._db["U"]
-    #     U_arr = U[
-    #         self.region_id.left : self.region_id.right + 1,
-    #         self.region_id.up : self.region_id.down + 1,
-    #         day_id,
-    #     ]
-
-    #     V: h5netcdf.Variable = self._db["V"]
-    #     V_arr = V[
-    #         self.region_id.left : self.region_id.right + 1,
-    #         self.region_id.up : self.region_id.down + 1,
-    #         day_id,
-    #     ]
-
-    #     data = ConvDayData(target=target_arr, U=U_arr, V=V_arr)
-    #     return data
-    
-    # def setRegionId(self, region_id: Id | None) -> None:
-    #     self.region_id = region_id
-    
-    # def setDateRange(self, date_range: tuple[date, date]) -> None:
-    #     pass
 
     def getDefaultDateRange(self) -> DateData:
         """Вычисляет дефолтный временной диапазон"""
@@ -143,10 +77,6 @@ class DataLoader():
         day = datetime(year=year, month=month, day=day, hour=hour)
 
         return day
-    
-    # def dayonvData(day: date) -> ConvData:
-    #     """Возвращает данные для определенного дня"""
-    #     pass
 
     def getBorderConc(self, day_id: int, region_id: Id) -> ConvConc:
         """Возвращает граничные значения концентраций для региона"""

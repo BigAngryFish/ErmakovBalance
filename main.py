@@ -17,6 +17,8 @@ REGION = Region(
 def main():
     data_path = "../PWV_flow_._2012_01_.nc"
     target_name = "PWV"
+    # data_path = "../CO_flow_2022.nc"
+    # target_name = "20220601_mean"
     data_loader = DataLoader(data_path, target_name)
     # data_loader.setRegionId(processor.id)
 
