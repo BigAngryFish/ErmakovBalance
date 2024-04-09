@@ -6,15 +6,15 @@ from constants import *
 
 def verifyMap(data_map: np.ndarray) -> None:
     """"Проверяет размерность карты"""
+    return None
+    # if not isinstance(data_map, np.ndarray):
+    #     raise TypeError(f"expected numpy.ndarray for 'data_map")
 
-    if not isinstance(data_map, np.ndarray):
-        raise TypeError(f"expected numpy.ndarray for 'data_map")
+    # if data_map.ndim != 2:
+    #     raise TypeError(f"expected 2D array for 'data_map'")
 
-    if data_map.ndim != 2:
-        raise TypeError(f"expected 2D array for 'data_map'")
-
-    if data_map.shape != MAP_SIZE:    
-        raise ValueError(f"'data_map' must have shape of {MAP_SIZE}")
+    # if data_map.shape != MAP_SIZE:    
+    #     raise ValueError(f"'data_map' must have shape of {MAP_SIZE}")
 
 
 class CoordTools():

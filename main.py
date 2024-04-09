@@ -1,47 +1,42 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import time
 
-from data_processing import RegionProcessor, SumCalculator, ConvCalculator
+from data_processing import RegionProcessor, SumCalculator, ConvCalculator, BalanceCalculator
 from data_loading import  DataLoader
 from containers import Region
 
 
 REGION = Region(
-    up = 55,
-    down = 45,
-    left = 128,
-    right = 135,
+    up = 65,
+    down = 55,
+    left = 130,
+    right = 140,
 )
+
+START_DAY = 39
+END_DAY = 69
 
 
 def main():
-    data_path = "../PWV_flow_._2012_01_.nc"
-    target_name = "PWV"
-    # data_path = "../CO_flow_2022.nc"
-    # target_name = "20220601_mean"
+    # data_path = "../PWV_flow_._2012_01_.nc"
+    # target_name = "PWV"
+    data_path = "../CO_flow_2022.nc"
+    target_name = "20220601_mean"
     data_loader = DataLoader(data_path, target_name)
     # data_loader.setRegionId(processor.id)
 
     # обрабатываем регион
-    processor = RegionProcessor(REGION)
+    grid = data_loader.getGrid()
+    processor = RegionProcessor(REGION, grid)
     regdata = processor.getRegionData()
 
-    
-    # расчет суммы (для первой карты)
-    sum_calculator = SumCalculator(regdata)
-    firstmap = data_loader.getTargetMap(0)
-    pwv_sum = sum_calculator(firstmap)
+    balance_calc = BalanceCalculator(regdata, data_loader, (START_DAY, END_DAY))
+    balance = balance_calc.calcBalanceSeries()
 
-    # расчет конвергенции (для каждой единицы времени)
-    conv_calculator = ConvCalculator(regdata)
-    pwv_conv = 0
-    for day_id in range(data_loader.timedim):
-        convdata = data_loader.getConvData(day_id, processor.id)
-        pwv_conv += conv_calculator(convdata)
-        # break
-
-    print("sum: {:e}".format(pwv_sum))
-    print("conv: {:e}".format(pwv_conv))
+    x = np.arange(balance.size)
+    plt.plot(x, balance)
+    plt.savefig("balance_2.png")
 
     data_loader.close()
 

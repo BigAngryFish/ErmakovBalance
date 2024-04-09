@@ -29,6 +29,14 @@ class DataLoader():
         """Возвращает количество единиц времени"""
         return self.original_dates.end_id - self.original_dates.start_id + 1
     
+    def getGrid(self) -> Grid:
+        """Возвращает сетку"""
+        lat = np.array(self._db["lat"])
+        lon = np.array(self._db["lon"])
+
+        grid = Grid(lat=lat, lon=lon)
+        return grid
+    
     def getTargetMap(self, day_id: int) -> np.ndarray:
         data_map = self._db[self.target_name][..., day_id]
         return np.transpose(data_map)

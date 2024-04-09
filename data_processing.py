@@ -1,6 +1,7 @@
 import numpy as np
 
 from tools import CoordTools, verifyMap
+from data_loading import  DataLoader
 from containers import *
 from constants import *
 
@@ -267,3 +268,57 @@ class ConvCalculator():
         :type mode: str
         """
         return self.calcConv(convdata, mode)
+
+
+
+class BalanceCalculator():
+
+    def __init__(self, regdata: RegionData, data_loader: DataLoader, date_range: tuple) -> None:
+        """Инициализация"""
+
+        self.regdata: RegionData = regdata
+        self.data_loader: DataLoader = data_loader
+        self.start_day, self.end_day = date_range
+
+    def calcSumsDiffSeries(self) -> np.ndarray:
+        """Рассчитывает разницу сумм концетраций"""
+        sum_calculator = SumCalculator(self.regdata)
+
+        # расчет сумм
+        sums = []
+        for day_id in range(self.start_day, self.end_day + 1):
+            concmap = self.data_loader.getTargetMap(day_id)
+            concsum = sum_calculator(concmap)
+            sums.append(concsum)
+        
+        # разница сумм
+        diff_sums = []
+        for day_id in range(len(sums) - 1):
+            diff = sums[day_id + 1] - sums[day_id]
+            diff_sums.append(diff)
+        diff_sums = np.array(diff_sums)
+
+        return np.array(diff_sums)
+    
+    def calcConvDiffSeries(self) -> np.ndarray:
+        """Рассчитывает разницу конвергенций"""
+        # расчет конвергенции (для каждой единицы времени)
+        convs = []
+        conv_calculator = ConvCalculator(self.regdata)
+        for day_id in range(self.start_day, self.end_day):
+            convdata = self.data_loader.getConvData(day_id, self.regdata.id)
+            conv_value = conv_calculator(convdata)
+            convs.append(conv_value)
+
+        return np.array(convs)
+
+    def calcBalanceSeries(self) -> np.ndarray:
+        """Рассчитывает временной ряд баланса"""
+
+        diff_sums = self.calcSumsDiffSeries()
+        convs =self.calcConvDiffSeries()
+
+        if diff_sums.shape != convs.shape:
+            raise Exception("diff_summs and convs have different shape")
+        
+        return diff_sums - convs
