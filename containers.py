@@ -1,7 +1,8 @@
 import numpy as np
-import math
+import h5netcdf
 
 from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass
@@ -70,6 +71,31 @@ class RegionData():
 
 @dataclass
 class Data():
+    target: h5netcdf.Variable
+    U: h5netcdf.Variable
+    V: h5netcdf.Variable
+
+
+@dataclass
+class ConvData():
+    """Содержит трехмерные массивы - широта, долгота, и время"""
     target: np.ndarray
-    U: np.ndarray | None = None
-    V: np.ndarray | None = None
+    U: np.ndarray
+    V: np.ndarray
+
+
+@dataclass
+class ConvDayData():
+    """Содержит двумерные массивы - широта и долгота"""
+    target: np.ndarray
+    U: np.ndarray
+    V: np.ndarray
+
+
+@dataclass
+class DateData():
+    start: datetime
+    end: datetime
+    start_id: int
+    end_id: int
+    seconds: int

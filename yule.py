@@ -60,10 +60,71 @@ def pwv(str):
 
     return mult_s.sum()
 
+def conv(str):
+    f = h5netcdf.File(str, "r")
+ 
+    # ИВС по границам
+    pwv_r = np.array([np.transpose(np.array(f['PWV'][...,i]))[id_up:id_down+1,id_right] for i in range(f['PWV'].shape[2])])
+    pwv_l = np.array([np.transpose(np.array(f['PWV'][...,i]))[id_up:id_down+1,id_left] for i in range(f['PWV'].shape[2])])
+    pwv_d = np.array([np.transpose(np.array(f['PWV'][...,i]))[id_down,id_left:id_right+1] for i in range(f['PWV'].shape[2])])
+    pwv_u = np.array([np.transpose(np.array(f['PWV'][...,i]))[id_up,id_left:id_right+1] for i in range(f['PWV'].shape[2])])
+    
+    # U по границам
+    u_r = np.array([np.transpose(np.array(f['U'][...,i]))[id_up:id_down+1,id_right] for i in range(f['U'].shape[2])])
+    u_l = np.array([np.transpose(np.array(f['U'][...,i]))[id_up:id_down+1,id_left] for i in range(f['U'].shape[2])])
+
+    # V по границам
+    v_d = np.array([np.transpose(np.array(f['V'][...,i]))[id_down,id_left:id_right+1] for i in range(f['V'].shape[2])])
+    v_u = np.array([np.transpose(np.array(f['V'][...,i]))[id_up,id_left:id_right+1] for i in range(f['V'].shape[2])])
+
+    q_l = pwv_l * u_l
+    q_r = pwv_r * u_r
+    q_d = pwv_d * v_d
+    q_u = pwv_u * v_u
+
+    inner = []
+    out = []
+    for i in q_r:
+        for j in i:
+            if j<0:
+                inner.append(j * area_lats)
+            else:
+                out.append(j * area_lats)
+
+    for i in q_l:
+        for j in i:
+            if j>0:
+                inner.append(j * area_lats)
+            else:
+                out.append(j * area_lats)
+
+    for i in q_u:
+        for j in i:
+            if j<0:
+                inner.append(j * area_up)
+            else:
+                out.append(j * area_up)
+
+    for i in q_d:
+        for j in i:
+            if j>0:
+                inner.append(j * area_down)
+            else:
+                out.append(j * area_down)
+ 
+    sum_out = sum(map(abs,out))
+    sum_inner = sum(map(abs,inner))
+    convergence = (sum_inner-sum_out) * 3 * 3600
+    return convergence
+
+
 path = "../PWV_flow_._2012_01_.nc"
 pwv_sum = pwv(path)
+pwv_conv = conv(path)
 
 end_time = time.time()
 
 print("sum: {:e}".format(pwv_sum))
+print("conv: {:e}".format(pwv_conv))
+
 print(f"time: {round(end_time - start_time, 2)} s")

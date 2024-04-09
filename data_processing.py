@@ -1,36 +1,157 @@
 import numpy as np
 import math
 import h5netcdf
+from datetime import date, datetime
 
-from containers import Region, Id, Grid, Cell, RegionData, Data
+from containers import Region, Id, Grid, Cell, RegionData, Data, ConvData, DateData, ConvDayData
 from constants import *
 
 
 class DataLoader():
     """Класс для загрузки данных"""
 
-    def __init__(self, path: str, target: str) -> None:
+    def __init__(self, path: str, target_name: str) -> None:
         """Инициализация"""
 
         self._db: h5netcdf.File = h5netcdf.File(path, "r")
-        self._data: Data = self.extractData(self._db, target)
-        self._db.close()
+        self.target_name: str = target_name
+
+        self.original_shape = self._db[target_name].shape
+        self.transposed_shape = (
+            self.original_shape[1],
+            self.original_shape[0],
+            self.original_shape[2],
+        )
+
+        self.region_id: Id = self.getDefaultRegionRange()
+        self.date_data: DateData = self.getDefaultDateRange()
 
     @property
-    def data(self) -> Data:
+    def convdata(self) -> ConvData:
         """Возвращает извлеченные данные"""
-        return self._data
+        return self.getRegionData()
     
-    @staticmethod
-    def extractData(db: h5netcdf.File, target_name: str) -> Data:
+    @property
+    def timedim(self) -> int:
+        """Возвращает количество единиц времени"""
+        return self.date_data.end_id - self.date_data.start_id
+    
+    def getRegionData(self) -> ConvData:
         """Извлекает необходимые данные из БД"""
 
-        target = np.array(db[target_name][..., 0])
-        # U = np.array(db["U"])
-        # V = np.array(db["V"])
+        target: h5netcdf.Variable = self._db[self.target_name]
+        target_arr = target[
+            self.region_id.left : self.region_id.right + 1,
+            self.region_id.up : self.region_id.down + 1,
+            self.date_data.start_id : self.date_data.end_id,
+        ]
 
-        data = Data(target=target)
+        U: h5netcdf.Variable = self._db["U"]
+        U_arr = U[
+            self.region_id.left : self.region_id.right + 1,
+            self.region_id.up : self.region_id.down + 1,
+            self.date_data.start_id : self.date_data.end_id,
+        ]
+
+        V: h5netcdf.Variable = self._db["V"]
+        V_arr = V[
+            self.region_id.left : self.region_id.right + 1,
+            self.region_id.up : self.region_id.down + 1,
+            self.date_data.start_id : self.date_data.end_id,
+        ]
+
+        data = ConvData(target=target_arr, U=U_arr, V=V_arr)
         return data
+    
+    def getTargetMap(self, day_id: int) -> np.ndarray:
+        data_map = self._db[self.target_name][..., day_id]
+        return np.transpose(data_map)
+    
+    def getUMap(self, day_id: int) -> np.ndarray:
+        return np.transpose(self._db["U"][..., day_id])
+    
+    def getVMap(self, day_id: int) -> np.ndarray:
+        return np.transpose(self._db["V"][..., day_id])
+    
+    def getRegionDayData(self, day_id: int) -> ConvDayData:
+        """Извлекает необходимые данные из БД"""
+
+        target: h5netcdf.Variable = self._db[self.target_name]
+        target_arr = target[
+            self.region_id.left : self.region_id.right + 1,
+            self.region_id.up : self.region_id.down + 1,
+            day_id,
+        ]
+
+        U: h5netcdf.Variable = self._db["U"]
+        U_arr = U[
+            self.region_id.left : self.region_id.right + 1,
+            self.region_id.up : self.region_id.down + 1,
+            day_id,
+        ]
+
+        V: h5netcdf.Variable = self._db["V"]
+        V_arr = V[
+            self.region_id.left : self.region_id.right + 1,
+            self.region_id.up : self.region_id.down + 1,
+            day_id,
+        ]
+
+        data = ConvDayData(target=target_arr, U=U_arr, V=V_arr)
+        return data
+    
+    def setRegionId(self, region_id: Id | None) -> None:
+        self.region_id = region_id
+    
+    def setDateRange(self, date_range: tuple[date, date]) -> None:
+        pass
+
+    def getDefaultDateRange(self) -> DateData:
+        """Вычисляет дефолтный временной диапазон"""
+        start_id = 0
+        end_id = self.original_shape[2] - 1
+
+        start_day = self._stimeToDate(self._db["stime"][start_id])
+        end_day = self._stimeToDate(self._db["stime"][end_id])
+
+        next_day = self._stimeToDate(self._db["stime"][start_id + 1])
+        seconds = (next_day - start_day).seconds
+
+        date_data = DateData(
+            start=start_day, end=end_day,
+            start_id=start_id, end_id=end_id,
+            seconds=seconds,
+        )
+
+        return date_data
+    
+    def getDefaultRegionRange(self) -> Id:
+        """Дефолтный регион - вся область"""
+        region_id = Id(
+            left=0,
+            right=self.original_shape[1],
+            up=0,
+            down=self.original_shape[0],
+        )
+        return region_id
+
+    @staticmethod
+    def _stimeToDate(stime: bytes) -> datetime:
+        stime = str(stime)
+        day_values = list(map(int, stime[2:12].split('-')))
+        year, month, day = day_values
+        hour = int(stime[13:15])
+        day = datetime(year=year, month=month, day=day, hour=hour)
+
+        return day
+    
+    def dayonvData(day: date) -> ConvData:
+        """Возвращает данные для определенного дня"""
+        pass
+    
+    def close(self) -> None:
+        """Закрытие базы данных"""
+        self._db.close()
 
 
 class CoordTools():
@@ -148,8 +269,8 @@ class RegionProcessor():
         """
         Рассчитывает краевые значение региона в индексах и возвращает результат
         """
-        left = CoordTools.closestId(region.left, grid.lon)
-        right = CoordTools.closestId(region.right, grid.lon)
+        left = CoordTools.closestId(region.left, grid.lon) + 1
+        right = CoordTools.closestId(region.right, grid.lon) + 1
         down = CoordTools.closestId(region.down, grid.lat)
         up = CoordTools.closestId(region.up, grid.lat)
 
@@ -213,28 +334,100 @@ class RegionProcessor():
     
         return areas
 
-    def calcSum(self, map: np.ndarray) -> float:
+    @staticmethod    
+    def _verifyMap(data_map: np.ndarray) -> None:
+        """"Проверяет размерность карты"""
+
+        if not isinstance(data_map, np.ndarray):
+            raise TypeError(f"expected numpy.ndarray for 'data_map")
+
+        if data_map.ndim != 2:
+            raise TypeError(f"expected 2D array for 'data_map'")
+
+        if data_map.shape != MAP_SIZE:    
+            raise ValueError(f"'data_map' must have shape of {MAP_SIZE}")
+
+
+    def calcSum(self, data_map: np.ndarray) -> float:
         """
         Рассчитывает сумму в регионе и возвращает результат
 
         Значение концетрации в точке для каждой ячейки  интерполируется  на  всю  площадь
         ячейки, после чего суммируется содержание по всей площади ячейки
         
-        :param map: 2D-numpy.ndarray размером (STD_HEIGTH,STD_WIDTH), карта с содержанием
+        :param data_map: 2D-numpy.ndarray размером (STD_HEIGTH,STD_WIDTH), карта с содержанием
             газа в точке внутри каждой ячейки
-        :type map: numpy.ndarray
+        :type data_map: numpy.ndarray
         """
-        values_in_points: np.ndarray = (
-            np.transpose(map)[
-                self.id.up : self.id.down + 1,
-                self.id.left : self.id.right + 1
-            ]
+        self._verifyMap(data_map)
+
+        values_in_points: np.ndarray = data_map[
+            self.id.up : self.id.down + 1,
+            self.id.left : self.id.right + 1
+        ]
+
+        total_sum = (self.areas_matrix * values_in_points).sum()
+        return float(total_sum)
+    
+    def _verifyConvData(self, data: ConvData) -> None:
+        """Проверяет валидность ConvData"""
+        self._verifyMap(data.target)
+        self._verifyMap(data.U)
+        self._verifyMap(data.V)
+
+    def calcConv(self, data: ConvData, mode: str = "total") -> float | tuple:
+        """
+        Рассчитывает дивергенцию в регионе и возвращает результат
+        
+        Рассчет ведется для одной единицы  времени,  соответственно  карты  концентрации,
+        вертикальный и горизонтальных перемещений представляют собой двумерные массивы
+        
+        :param data: карты концентрации и перемещений вещества
+        :type data: ConvData
+        :param mode: ["total", "diff"]  -  определяет  тип  возвращаемого  значения; если
+            "total"  -  возвращается суммарное значение переноса вещества в регионе, если
+            "diff" - кортеж (income, outcome) со значениями вноса и выноса вещества
+        """
+        self._verifyConvData(data)
+
+        # концентрация по границам (кг / м2)
+        right_conc = data.target[self.id.up : self.id.down + 1, self.id.right]
+        left_conc = data.target[self.id.up : self.id.down + 1, self.id.left]
+        down_conc = data.target[self.id.down, self.id.left : self.id.right + 1]
+        up_conc = data.target[self.id.up, self.id.left : self.id.right + 1]
+
+        # U по границам (м / с)
+        right_flow = data.U[self.id.up : self.id.down + 1, self.id.right]
+        left_flow = data.U[self.id.up : self.id.down + 1, self.id.left]
+        # V по границам  (м / с)
+        down_flow = data.V[self.id.down, self.id.left : self.id.right + 1]
+        up_flow = data.V[self.id.up, self.id.left : self.id.right + 1]
+
+        # значение унесенного/ принесенного вещества (кг / м2) * (м / c) * м
+        right_value_flow = right_conc * right_flow * self.cell.right
+        left_value_flow = left_conc * left_flow * self.cell.left
+        down_value_flow = down_conc * down_flow * self.cell.down
+        up_value_flow = up_conc * up_flow * self.cell.up
+
+        income = float(
+            right_value_flow[np.argwhere(right_value_flow < 0)].sum() * -1
+            + left_value_flow[np.argwhere(left_value_flow > 0)].sum()
+            + down_value_flow[np.argwhere(down_value_flow > 0)].sum()
+            + up_value_flow[np.argwhere(up_value_flow < 0)].sum() * -1
         )
 
-        sum_per_cell: np.ndarray = self.areas_matrix * values_in_points
-        total_sum: float = float(sum_per_cell.sum())
+        outcome = float(
+            right_value_flow[np.argwhere(right_value_flow >= 0)].sum()
+            + left_value_flow[np.argwhere(left_value_flow <= 0)].sum() * -1
+            + down_value_flow[np.argwhere(down_value_flow <= 0)].sum() * -1
+            + up_value_flow[np.argwhere(up_value_flow >= 0)].sum()
+        )
 
-        return total_sum
-
-    def calcConv(self, data: Data) -> float:
-        """Рассчитывает дивергенцию в регионе и возвращает результат"""
+        if mode == "diff":
+            return income, outcome
+        
+        elif mode == "total":
+            return (income - outcome) * 3 * 3600
+        
+        else:
+            raise ValueError("invalid 'mode'")        
