@@ -34,7 +34,7 @@ class DataLoader():
     @property
     def timedim(self) -> int:
         """Возвращает количество единиц времени"""
-        return self.date_data.end_id - self.date_data.start_id
+        return self.date_data.end_id - self.date_data.start_id + 1
     
     def getRegionData(self) -> ConvData:
         """Извлекает необходимые данные из БД"""
