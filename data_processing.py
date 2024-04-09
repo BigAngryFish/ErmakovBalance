@@ -224,79 +224,7 @@ class RegionProcessor():
         """Проверяет валидность ConvData"""
         self._verifyMap(data.target)
         self._verifyMap(data.U)
-        self._verifyMap(data.V)
-
-    # def getConvConc(self, target_map: np.ndarray) -> ConvConc:
-    #     """Вовращает граничные массивы концетрация"""
-    #     self._verifyMap(target_map)
-
-    #     # концентрация по границам (кг / м2)
-    #     right_conc = target_map[self.id.up : self.id.down + 1, self.id.right]
-    #     left_conc = target_map[self.id.up : self.id.down + 1, self.id.left]
-    #     down_conc = target_map[self.id.down, self.id.left : self.id.right + 1]
-    #     up_conc = target_map[self.id.up, self.id.left : self.id.right + 1]
-
-    #     conv_conc = ConvConc(
-    #         right=right_conc,
-    #         left=left_conc,
-    #         down=down_conc,
-    #         up=up_conc,
-    #     )
-
-    #     return conv_conc
-    
-    # def getConvFlow(self, umap: np.ndarray, vmap: np.ndarray) -> ConvFlow:
-    #     """Возвращает граничные значения перемещений"""
-    #     self._verifyMap(umap)
-    #     self._verifyMap(vmap)
-
-    #     # U по границам (м / с)
-    #     right_flow = umap[self.id.up : self.id.down + 1, self.id.right]
-    #     left_flow = umap[self.id.up : self.id.down + 1, self.id.left]
-    #     # V по границам  (м / с)
-    #     down_flow = vmap[self.id.down, self.id.left : self.id.right + 1]
-    #     up_flow = vmap[self.id.up, self.id.left : self.id.right + 1]
-
-    #     flow = ConvFlow(
-    #         right=right_flow,
-    #         left=left_flow,
-    #         down=down_flow,
-    #         up=up_flow,
-    #     )
-
-    #     return flow
-    
-
-    # def calcConv(self, data: ConvData, mode: str = "total") -> float | tuple:
-    #     """
-    #     Рассчитывает дивергенцию в регионе и возвращает результат
-        
-    #     Рассчет ведется для одной единицы  времени,  соответственно  карты  концентрации,
-    #     вертикальный и горизонтальных перемещений представляют собой двумерные массивы
-        
-    #     :param data: карты концентрации и перемещений вещества
-    #     :type data: ConvData
-    #     :param mode: ["total", "diff"]  -  определяет  тип  возвращаемого  значения; если
-    #         "total"  -  возвращается суммарное значение переноса вещества в регионе, если
-    #         "diff" - кортеж (income, outcome) со значениями вноса и выноса вещества
-    #     """
-    #     self._verifyConvData(data)
-
-    #     conc = self.getConvConc(data.target)
-    #     flow = self.getConvFlow(umap=data.U, vmap=data.V)
-    #     values = self.getConvValue(conc, flow)
-
-    #     income = self.calcIncome(values)
-    #     outcome = self.calcOutcome(values)
-
-    #     if mode == "diff":
-    #         return income, outcome
-        
-    #     elif mode == "total":
-    #         return (income - outcome) * 3 * 3600
-        
-    #     else:
-    #         raise ValueError("invalid 'mode'")        
+        self._verifyMap(data.V)     
 
 
 class ConvCalculator():
@@ -363,4 +291,9 @@ class ConvCalculator():
             raise ValueError("invalid 'mode'") 
 
     def __call__(self, convdata: ConvOriginalDayData, mode: str = "total") -> float | tuple:
+        """
+        :param mode: ["total", "diff"]  -  определяет  тип  возвращаемого  значения; если
+            "total"  -  возвращается суммарное значение переноса вещества в регионе, если
+            "diff" - кортеж (income, outcome) со значениями вноса и выноса вещества
+        """
         return self.pipeline(convdata, mode)

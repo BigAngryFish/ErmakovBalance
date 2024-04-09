@@ -150,25 +150,23 @@ class DataLoader():
 
     def getBorderConc(self, day_id: int, region_id: Id) -> ConvConc:
         """Возвращает граничные значения концентраций для региона"""
-        right = self._db[self.target_name][
+        conc_map = self._db[self.target_name][..., day_id]
+
+        right = conc_map[
             region_id.right,
             region_id.up : region_id.down + 1,
-            day_id,
         ]
-        left = self._db[self.target_name][
+        left = conc_map[
             region_id.left,
             region_id.up : region_id.down + 1,
-            day_id,
         ]
-        down = self._db[self.target_name][
+        down = conc_map[
             region_id.left : region_id.right + 1,
             region_id.down,
-            day_id,
         ]
-        up = self._db[self.target_name][
+        up = conc_map[
             region_id.left : region_id.right + 1,
             region_id.up,
-            day_id,
         ]
 
         conc = ConvConc(
@@ -182,26 +180,25 @@ class DataLoader():
     
     def getBorderFlow(self, day_id: int, region_id: Id) -> ConvFlow:
         # U по границам (м / с)
-        right_flow = self._db["U"][
+        umap = self._db["U"][..., day_id]
+        right_flow = umap[
             region_id.right,
             region_id.up : region_id.down + 1,
-            day_id,
         ]
-        left_flow = self._db["U"][
+        left_flow = umap[
             region_id.left,
             region_id.up : region_id.down + 1,
-            day_id,
         ]
+
         # V по границам  (м / с)
-        down_flow = self._db["V"][
+        vmap = self._db["V"][..., day_id]
+        down_flow = vmap[
             region_id.left : region_id.right + 1,
             region_id.down,
-            day_id,
         ]
-        up_flow = self._db["V"][
+        up_flow = vmap[
             region_id.left : region_id.right + 1,
             region_id.up,
-            day_id,
         ]
 
         flow = ConvFlow(
