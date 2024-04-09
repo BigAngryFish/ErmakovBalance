@@ -3,7 +3,7 @@ import math
 import h5netcdf
 from datetime import date, datetime
 
-from containers import Region, Id, Grid, Cell, RegionData, Data, ConvData, DateData, ConvDayData
+from containers import *
 from constants import *
 
 
@@ -36,32 +36,32 @@ class DataLoader():
         """Возвращает количество единиц времени"""
         return self.date_data.end_id - self.date_data.start_id + 1
     
-    def getRegionData(self) -> ConvData:
-        """Извлекает необходимые данные из БД"""
+    # def getRegionData(self) -> ConvData:
+    #     """Извлекает необходимые данные из БД"""
 
-        target: h5netcdf.Variable = self._db[self.target_name]
-        target_arr = target[
-            self.region_id.left : self.region_id.right + 1,
-            self.region_id.up : self.region_id.down + 1,
-            self.date_data.start_id : self.date_data.end_id,
-        ]
+    #     target: h5netcdf.Variable = self._db[self.target_name]
+    #     target_arr = target[
+    #         self.region_id.left : self.region_id.right + 1,
+    #         self.region_id.up : self.region_id.down + 1,
+    #         self.date_data.start_id : self.date_data.end_id,
+    #     ]
 
-        U: h5netcdf.Variable = self._db["U"]
-        U_arr = U[
-            self.region_id.left : self.region_id.right + 1,
-            self.region_id.up : self.region_id.down + 1,
-            self.date_data.start_id : self.date_data.end_id,
-        ]
+    #     U: h5netcdf.Variable = self._db["U"]
+    #     U_arr = U[
+    #         self.region_id.left : self.region_id.right + 1,
+    #         self.region_id.up : self.region_id.down + 1,
+    #         self.date_data.start_id : self.date_data.end_id,
+    #     ]
 
-        V: h5netcdf.Variable = self._db["V"]
-        V_arr = V[
-            self.region_id.left : self.region_id.right + 1,
-            self.region_id.up : self.region_id.down + 1,
-            self.date_data.start_id : self.date_data.end_id,
-        ]
+    #     V: h5netcdf.Variable = self._db["V"]
+    #     V_arr = V[
+    #         self.region_id.left : self.region_id.right + 1,
+    #         self.region_id.up : self.region_id.down + 1,
+    #         self.date_data.start_id : self.date_data.end_id,
+    #     ]
 
-        data = ConvData(target=target_arr, U=U_arr, V=V_arr)
-        return data
+    #     data = ConvData(target=target_arr, U=U_arr, V=V_arr)
+    #     return data
     
     def getTargetMap(self, day_id: int) -> np.ndarray:
         data_map = self._db[self.target_name][..., day_id]
@@ -73,32 +73,32 @@ class DataLoader():
     def getVMap(self, day_id: int) -> np.ndarray:
         return np.transpose(self._db["V"][..., day_id])
     
-    def getRegionDayData(self, day_id: int) -> ConvDayData:
-        """Извлекает необходимые данные из БД"""
+    # def getRegionDayData(self, day_id: int) -> ConvDayData:
+    #     """Извлекает необходимые данные из БД"""
 
-        target: h5netcdf.Variable = self._db[self.target_name]
-        target_arr = target[
-            self.region_id.left : self.region_id.right + 1,
-            self.region_id.up : self.region_id.down + 1,
-            day_id,
-        ]
+    #     target: h5netcdf.Variable = self._db[self.target_name]
+    #     target_arr = target[
+    #         self.region_id.left : self.region_id.right + 1,
+    #         self.region_id.up : self.region_id.down + 1,
+    #         day_id,
+    #     ]
 
-        U: h5netcdf.Variable = self._db["U"]
-        U_arr = U[
-            self.region_id.left : self.region_id.right + 1,
-            self.region_id.up : self.region_id.down + 1,
-            day_id,
-        ]
+    #     U: h5netcdf.Variable = self._db["U"]
+    #     U_arr = U[
+    #         self.region_id.left : self.region_id.right + 1,
+    #         self.region_id.up : self.region_id.down + 1,
+    #         day_id,
+    #     ]
 
-        V: h5netcdf.Variable = self._db["V"]
-        V_arr = V[
-            self.region_id.left : self.region_id.right + 1,
-            self.region_id.up : self.region_id.down + 1,
-            day_id,
-        ]
+    #     V: h5netcdf.Variable = self._db["V"]
+    #     V_arr = V[
+    #         self.region_id.left : self.region_id.right + 1,
+    #         self.region_id.up : self.region_id.down + 1,
+    #         day_id,
+    #     ]
 
-        data = ConvDayData(target=target_arr, U=U_arr, V=V_arr)
-        return data
+    #     data = ConvDayData(target=target_arr, U=U_arr, V=V_arr)
+    #     return data
     
     def setRegionId(self, region_id: Id | None) -> None:
         self.region_id = region_id
@@ -375,6 +375,81 @@ class RegionProcessor():
         self._verifyMap(data.U)
         self._verifyMap(data.V)
 
+    def getConvConc(self, target_map: np.ndarray) -> ConvConc:
+        """Вовращает граничные массивы концетрация"""
+        # концентрация по границам (кг / м2)
+        right_conc = target_map[self.id.up : self.id.down + 1, self.id.right]
+        left_conc = target_map[self.id.up : self.id.down + 1, self.id.left]
+        down_conc = target_map[self.id.down, self.id.left : self.id.right + 1]
+        up_conc = target_map[self.id.up, self.id.left : self.id.right + 1]
+
+        conv_conc = ConvConc(
+            right=right_conc,
+            left=left_conc,
+            down=down_conc,
+            up=up_conc,
+        )
+
+        return conv_conc
+    
+    def getConvFlow(self, umap: np.ndarray, vmap: np.ndarray) -> ConvFlow:
+        """Возвращает граничные значения перемещений"""
+
+        # U по границам (м / с)
+        right_flow = umap[self.id.up : self.id.down + 1, self.id.right]
+        left_flow = umap[self.id.up : self.id.down + 1, self.id.left]
+        # V по границам  (м / с)
+        down_flow = vmap[self.id.down, self.id.left : self.id.right + 1]
+        up_flow = vmap[self.id.up, self.id.left : self.id.right + 1]
+
+        flow = ConvFlow(
+            right=right_flow,
+            left=left_flow,
+            down=down_flow,
+            up=up_flow,
+        )
+
+        return flow
+    
+    def getConvValue(self, conc: ConvConc, flow: ConvFlow) -> ConvValue:
+        """Рассчитывает потоки через границы"""
+        # значение унесенного/ принесенного вещества (кг / м2) * (м / c) * м
+        right_value_flow = conc.right * flow.right * self.cell.right
+        left_value_flow = conc.left * flow.left * self.cell.left
+        down_value_flow = conc.down * flow.down * self.cell.down
+        up_value_flow = conc.up * flow.up * self.cell.up
+
+        values = ConvValue(
+            right=right_value_flow,
+            left=left_value_flow,
+            down=down_value_flow,
+            up=up_value_flow,
+        )
+
+        return values
+    
+    @staticmethod
+    def calcIncome(conv_values: ConvValue) -> float:
+        """Рассчитывает приход"""
+        income = float(
+            conv_values.right[np.argwhere(conv_values.right < 0)].sum() * -1
+            + conv_values.left[np.argwhere(conv_values.left > 0)].sum()
+            + conv_values.down[np.argwhere(conv_values.down > 0)].sum()
+            + conv_values.up[np.argwhere(conv_values.up < 0)].sum() * -1
+        )
+        return income
+
+    @staticmethod
+    def calcOutcome(conv_values: ConvValue) -> float:
+        """Рассчитывает уход"""
+        outcome = float(
+            conv_values.right[np.argwhere(conv_values.right >= 0)].sum()
+            + conv_values.left[np.argwhere(conv_values.left <= 0)].sum() * -1
+            + conv_values.down[np.argwhere(conv_values.down <= 0)].sum() * -1
+            + conv_values.up[np.argwhere(conv_values.up >= 0)].sum()
+        )
+        return outcome
+
     def calcConv(self, data: ConvData, mode: str = "total") -> float | tuple:
         """
         Рассчитывает дивергенцию в регионе и возвращает результат
@@ -390,38 +465,12 @@ class RegionProcessor():
         """
         self._verifyConvData(data)
 
-        # концентрация по границам (кг / м2)
-        right_conc = data.target[self.id.up : self.id.down + 1, self.id.right]
-        left_conc = data.target[self.id.up : self.id.down + 1, self.id.left]
-        down_conc = data.target[self.id.down, self.id.left : self.id.right + 1]
-        up_conc = data.target[self.id.up, self.id.left : self.id.right + 1]
+        conc = self.getConvConc(data.target)
+        flow = self.getConvFlow(umap=data.U, vmap=data.V)
+        values = self.getConvValue(conc, flow)
 
-        # U по границам (м / с)
-        right_flow = data.U[self.id.up : self.id.down + 1, self.id.right]
-        left_flow = data.U[self.id.up : self.id.down + 1, self.id.left]
-        # V по границам  (м / с)
-        down_flow = data.V[self.id.down, self.id.left : self.id.right + 1]
-        up_flow = data.V[self.id.up, self.id.left : self.id.right + 1]
-
-        # значение унесенного/ принесенного вещества (кг / м2) * (м / c) * м
-        right_value_flow = right_conc * right_flow * self.cell.right
-        left_value_flow = left_conc * left_flow * self.cell.left
-        down_value_flow = down_conc * down_flow * self.cell.down
-        up_value_flow = up_conc * up_flow * self.cell.up
-
-        income = float(
-            right_value_flow[np.argwhere(right_value_flow < 0)].sum() * -1
-            + left_value_flow[np.argwhere(left_value_flow > 0)].sum()
-            + down_value_flow[np.argwhere(down_value_flow > 0)].sum()
-            + up_value_flow[np.argwhere(up_value_flow < 0)].sum() * -1
-        )
-
-        outcome = float(
-            right_value_flow[np.argwhere(right_value_flow >= 0)].sum()
-            + left_value_flow[np.argwhere(left_value_flow <= 0)].sum() * -1
-            + down_value_flow[np.argwhere(down_value_flow <= 0)].sum() * -1
-            + up_value_flow[np.argwhere(up_value_flow >= 0)].sum()
-        )
+        income = self.calcIncome(values)
+        outcome = self.calcOutcome(values)
 
         if mode == "diff":
             return income, outcome

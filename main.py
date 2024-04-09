@@ -34,6 +34,7 @@ def main():
             V = data_loader.getVMap(day_id),
         )
         pwv_conv += processor.calcConv(data)
+        break
 
     print("sum: {:e}".format(pwv_sum))
     print("conv: {:e}".format(pwv_conv))

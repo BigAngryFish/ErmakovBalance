@@ -93,6 +93,30 @@ class ConvDayData():
 
 
 @dataclass
+class ConvConc():
+    right: np.ndarray
+    left: np.ndarray
+    down: np.ndarray
+    up: np.ndarray
+
+
+@dataclass
+class ConvFlow():
+    right: np.ndarray
+    left: np.ndarray
+    down: np.ndarray
+    up: np.ndarray
+
+
+@dataclass
+class ConvValue():
+    right: np.ndarray
+    left: np.ndarray
+    down: np.ndarray
+    up: np.ndarray
+
+
+@dataclass
 class DateData():
     start: datetime
     end: datetime
