@@ -85,14 +85,6 @@ class ConvData():
 
 
 @dataclass
-class ConvDayData():
-    """Содержит двумерные массивы - широта и долгота"""
-    target: np.ndarray
-    U: np.ndarray
-    V: np.ndarray
-
-
-@dataclass
 class ConvConc():
     right: np.ndarray
     left: np.ndarray
@@ -106,6 +98,12 @@ class ConvFlow():
     left: np.ndarray
     down: np.ndarray
     up: np.ndarray
+
+
+@dataclass
+class ConvOriginalDayData():
+    conc: ConvConc
+    flow: ConvFlow
 
 
 @dataclass

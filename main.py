@@ -1,8 +1,9 @@
 import numpy as np
 import time
 
-from data_processing import RegionProcessor, DataLoader
-from containers import Region, ConvData, ConvDayData
+from data_processing import RegionProcessor, ConvCalculator
+from data_loading import  DataLoader
+from containers import Region
 
 
 REGION = Region(
@@ -25,16 +26,13 @@ def main():
     firstmap = data_loader.getTargetMap(0)
     pwv_sum = processor.calcSum(firstmap)
 
+    conv_calculator = ConvCalculator(processor.cell)
     pwv_conv = 0
     days_amount = data_loader.timedim
     for day_id in range(days_amount):
-        data = ConvDayData(
-            target = data_loader.getTargetMap(day_id),
-            U = data_loader.getUMap(day_id),
-            V = data_loader.getVMap(day_id),
-        )
-        pwv_conv += processor.calcConv(data)
-        break
+        convdata = data_loader.getConvData(day_id, processor.id)
+        pwv_conv += conv_calculator(convdata)
+        # break
 
     print("sum: {:e}".format(pwv_sum))
     print("conv: {:e}".format(pwv_conv))
