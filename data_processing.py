@@ -1,65 +1,8 @@
 import numpy as np
-import math
 
+from tools import CoordTools, verifyMap
 from containers import *
 from constants import *
-
-
-class CoordTools():
-    """Класс с функциями для работы с координатами"""
-
-    @staticmethod
-    def calcGrid() -> Grid:
-        """Рассчитывает сетку координат и возвращает результат"""
-        STD_lons =  [
-            (20.125 + X * 0.25) if X<640 else (20.125 + (X - 1440) * 0.25) for X in range(STD_WIDTH)
-        ]
-
-        STD_lats_Btm0 = [ 89.875 - (719 - Y) * 0.25 for Y in range(STD_HEIGTH) ]
-        STD_lats_Top0 = [ (719 - Y) * 0.25 - 89.875 for Y in range(STD_HEIGTH) ]
-        STD_lats = STD_lats_Top0 if OPT_IMAGE_TOP0 else STD_lats_Btm0
-
-        grid = Grid(
-            lat=np.array(STD_lats), 
-            lon=np.array(STD_lons),
-        )
-    
-        return grid
-
-    @staticmethod
-    def closestId(coord: float, array: np.array) -> int:
-        """
-        Возвращает индекс значения из массива 'array',ближайшего по значению к координате
-        'coord'
-        """
-        return int(np.argmin(np.absolute(array - coord)))
-    
-    @staticmethod
-    def closest(coord: float, array: np.array) -> float:
-        """
-        Возвращает значение из массива 'array', ближайшее к координате 'coord'
-        """
-        return float(array[np.argmin(np.absolute(array - coord))])
-
-    @staticmethod
-    def calcLatCoef(lat_coord: int) -> float:
-        """
-        Рассчитывает коеффициент для вычисления длины параллели ячейки (длиной в четверть
-        градуса) в зависимости от широты
-
-        :param lat_coord: координата широты
-        """
-        return math.cos(math.radians(abs(lat_coord)))
-    
-    @staticmethod
-    def caclParralelLength(lat_coord) -> float:
-        """
-        Рассчитывает  длину  единичного  отрезка  параллели  (0.25  градуса)  в  метрах и
-        возвращает результат
-        """
-        coef = CoordTools.calcLatCoef(lat_coord)
-        length = CELL_LENGTH_METERS * coef
-        return length
 
 
 class RegionProcessor():
@@ -115,6 +58,11 @@ class RegionProcessor():
         """Возвращает размеры краевых ячеек в метрах"""
         return self._cell
     
+    @property
+    def areas(self) ->np.ndarray:
+        """Возвращает площади ячеек в м2"""
+        return self.areas_matrix
+    
     @staticmethod
     def getId(region: Region, grid: Grid) -> Id:
         """
@@ -160,6 +108,7 @@ class RegionProcessor():
             id=self._id,
             grid_region=self.grid_region,
             cell=self.cell,
+            cellareas=self.areas_matrix,
         )
 
         return data
@@ -185,19 +134,21 @@ class RegionProcessor():
     
         return areas
 
-    @staticmethod    
-    def _verifyMap(data_map: np.ndarray) -> None:
-        """"Проверяет размерность карты"""
 
-        if not isinstance(data_map, np.ndarray):
-            raise TypeError(f"expected numpy.ndarray for 'data_map")
+class SumCalculator():
+    """
+    Класс для расчета суммы содержания вещества в регионе в данный момент времени
+    
+    Параметры
+    ---------
+    regdata: RegionData
+        пространственная информация о регионе    
+    """
 
-        if data_map.ndim != 2:
-            raise TypeError(f"expected 2D array for 'data_map'")
+    def __init__(self, regdata: RegionData) -> None:
+        """Инициализация"""
 
-        if data_map.shape != MAP_SIZE:    
-            raise ValueError(f"'data_map' must have shape of {MAP_SIZE}")
-
+        self.regdata: RegionData = regdata
 
     def calcSum(self, data_map: np.ndarray) -> float:
         """
@@ -209,39 +160,44 @@ class RegionProcessor():
         :param data_map: 2D-numpy.ndarray размером (STD_HEIGTH,STD_WIDTH), карта с содержанием
             газа в точке внутри каждой ячейки
         :type data_map: numpy.ndarray
+        ...
+        :return: суммарное содержание вещества в регионе в данный момент времени (в кг)
+        :rtype: float
         """
-        self._verifyMap(data_map)
+        verifyMap(data_map)
+
+        region_id = self.regdata.id
+        cellareas = self.regdata.cellareas
 
         values_in_points: np.ndarray = data_map[
-            self.id.up : self.id.down + 1,
-            self.id.left : self.id.right + 1
+            region_id.up : region_id.down + 1,
+            region_id.left : region_id.right + 1
         ]
 
-        total_sum = (self.areas_matrix * values_in_points).sum()
+        total_sum = (cellareas * values_in_points).sum()
         return float(total_sum)
     
-    def _verifyConvData(self, data: ConvData) -> None:
-        """Проверяет валидность ConvData"""
-        self._verifyMap(data.target)
-        self._verifyMap(data.U)
-        self._verifyMap(data.V)     
+    def __call__(self, data_map: np.ndarray) -> float:
+        return self.calcSum(data_map)
 
 
 class ConvCalculator():
     #TODO секунды - затычка
-    def __init__(self, region_cell: Cell, seconds: int = 3 * 3600) -> None:
+    def __init__(self, regdata: RegionData, seconds: int = 3 * 3600) -> None:
         """Инициализация"""
 
-        self.cell: Cell = region_cell
+        self.regdata: RegionData = regdata
         self.seconds: int = seconds
     
     def getConvValue(self, conc: ConvConc, flow: ConvFlow) -> ConvValue:
         """Рассчитывает потоки через границы"""
+        cell = self.regdata.cell
+
         # значение унесенного/ принесенного вещества (кг / м2) * (м / c) * м
-        right_value_flow = conc.right * flow.right * self.cell.right
-        left_value_flow = conc.left * flow.left * self.cell.left
-        down_value_flow = conc.down * flow.down * self.cell.down
-        up_value_flow = conc.up * flow.up * self.cell.up
+        right_value_flow = conc.right * flow.right * cell.right
+        left_value_flow = conc.left * flow.left * cell.left
+        down_value_flow = conc.down * flow.down * cell.down
+        up_value_flow = conc.up * flow.up * cell.up
 
         values = ConvValue(
             right=right_value_flow,
@@ -274,8 +230,17 @@ class ConvCalculator():
         )
         return outcome
 
-    def pipeline(self, convdata: ConvOriginalDayData, mode: str = "total") -> float | tuple:
-        """Рассчитывает конвергенция в регионе для одного дня"""
+    def calcConv(self, convdata: ConvOriginalDayData, mode: str = "total") -> float | tuple:
+        """
+        Рассчитывает конвергенция в регионе для одного дня
+
+        :param convdata: данные, необходимые для расчета конвергенции
+        :type convdata: ConvOriginalDayData
+        :param mode: ["total", "diff"]  -  определяет  тип  возвращаемого  значения; если
+            "total"  -  возвращается суммарное значение переноса вещества в регионе, если
+            "diff" - кортеж (income, outcome) со значениями вноса и выноса вещества
+        :type mode: str
+        """
         values = self.getConvValue(convdata.conc, convdata.flow)
 
         income = self.calcIncome(values) * self.seconds
@@ -292,8 +257,13 @@ class ConvCalculator():
 
     def __call__(self, convdata: ConvOriginalDayData, mode: str = "total") -> float | tuple:
         """
+        Рассчитывает конвергенция в регионе для одного дня
+
+        :param convdata: данные, необходимые для расчета конвергенции
+        :type convdata: ConvOriginalDayData
         :param mode: ["total", "diff"]  -  определяет  тип  возвращаемого  значения; если
             "total"  -  возвращается суммарное значение переноса вещества в регионе, если
             "diff" - кортеж (income, outcome) со значениями вноса и выноса вещества
+        :type mode: str
         """
-        return self.pipeline(convdata, mode)
+        return self.calcConv(convdata, mode)

@@ -1,7 +1,7 @@
 import numpy as np
 import time
 
-from data_processing import RegionProcessor, ConvCalculator
+from data_processing import RegionProcessor, SumCalculator, ConvCalculator
 from data_loading import  DataLoader
 from containers import Region
 
@@ -17,19 +17,23 @@ REGION = Region(
 def main():
     data_path = "../PWV_flow_._2012_01_.nc"
     target_name = "PWV"
-
-    processor = RegionProcessor(REGION)
-
     data_loader = DataLoader(data_path, target_name)
     # data_loader.setRegionId(processor.id)
-    
-    firstmap = data_loader.getTargetMap(0)
-    pwv_sum = processor.calcSum(firstmap)
 
-    conv_calculator = ConvCalculator(processor.cell)
+    # обрабатываем регион
+    processor = RegionProcessor(REGION)
+    regdata = processor.getRegionData()
+
+    
+    # расчет суммы (для первой карты)
+    sum_calculator = SumCalculator(regdata)
+    firstmap = data_loader.getTargetMap(0)
+    pwv_sum = sum_calculator(firstmap)
+
+    # расчет конвергенции (для каждой единицы времени)
+    conv_calculator = ConvCalculator(regdata)
     pwv_conv = 0
-    days_amount = data_loader.timedim
-    for day_id in range(days_amount):
+    for day_id in range(data_loader.timedim):
         convdata = data_loader.getConvData(day_id, processor.id)
         pwv_conv += conv_calculator(convdata)
         # break
