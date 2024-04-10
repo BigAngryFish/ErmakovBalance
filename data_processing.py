@@ -300,7 +300,7 @@ class BalanceCalculator():
 
         return np.array(diff_sums)
     
-    def calcConvDiffSeries(self) -> np.ndarray:
+    def calcConvSeries(self) -> np.ndarray:
         """Рассчитывает разницу конвергенций"""
         # расчет конвергенции (для каждой единицы времени)
         convs = []
@@ -316,7 +316,7 @@ class BalanceCalculator():
         """Рассчитывает временной ряд баланса"""
 
         diff_sums = self.calcSumsDiffSeries()
-        convs =self.calcConvDiffSeries()
+        convs =self.calcConvSeries()
 
         if diff_sums.shape != convs.shape:
             raise Exception("diff_summs and convs have different shape")

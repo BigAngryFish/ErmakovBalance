@@ -14,6 +14,8 @@ class DataLoader():
         self._db: h5netcdf.File = h5netcdf.File(path, "r")
         self.target_name: str = target_name
 
+        self.time_variable = "stime"
+
         self.original_shape = self._db[target_name].shape
         self.transposed_shape = (
             self.original_shape[1],
@@ -52,10 +54,10 @@ class DataLoader():
         start_id = 0
         end_id = self.original_shape[2] - 1
 
-        start_day = self._stimeToDate(self._db["stime"][start_id])
-        end_day = self._stimeToDate(self._db["stime"][end_id])
+        start_day = self._stimeToDate(self._db[self.time_variable][start_id])
+        end_day = self._stimeToDate(self._db[self.time_variable][end_id])
 
-        next_day = self._stimeToDate(self._db["stime"][start_id + 1])
+        next_day = self._stimeToDate(self._db[self.time_variable][start_id + 1])
         seconds = (next_day - start_day).seconds
 
         date_data = DateData(
@@ -85,6 +87,14 @@ class DataLoader():
         day = datetime(year=year, month=month, day=day, hour=hour)
 
         return day
+    
+    def getDatetimeById(self, time_id: int) -> datetime:
+        """
+        Возвращает дату и время, соответствующие индексу 'time_id'
+        """
+        stime = self._db[self.time_variable][time_id]
+        date_time = self._stimeToDate(stime)
+        return date_time
 
     def getBorderConc(self, day_id: int, region_id: Id) -> ConvConc:
         """Возвращает граничные значения концентраций для региона"""
