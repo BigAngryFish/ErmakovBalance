@@ -279,38 +279,44 @@ class BalanceCalculator():
         self.regdata: RegionData = regdata
         self.data_loader: DataLoader = data_loader
         self.start_day, self.end_day = date_range
+    
+        self.sum_calculator = SumCalculator(self.regdata)
+        self.conv_calculator = ConvCalculator(self.regdata)
+
+    def calcSumSeries(self) -> np.ndarray:
+        """Рассчитывает временной ряд сумм содержания вещества в регионе"""
+        # расчет сумм
+        sums = np.zeros(self.end_day - self.start_day + 1)
+    
+        for day_id in range(self.start_day, self.end_day + 1):
+            concmap = self.data_loader.getTargetMap(day_id)
+            sums[day_id - self.start_day] = self.sum_calculator(concmap)
+    
+        return sums
 
     def calcSumsDiffSeries(self) -> np.ndarray:
         """Рассчитывает разницу сумм концетраций"""
-        sum_calculator = SumCalculator(self.regdata)
+        sums = self.calcSumSeries()
 
-        # расчет сумм
-        sums = []
-        for day_id in range(self.start_day, self.end_day + 1):
-            concmap = self.data_loader.getTargetMap(day_id)
-            concsum = sum_calculator(concmap)
-            sums.append(concsum)
-        
-        # разница сумм
-        diff_sums = []
-        for day_id in range(len(sums) - 1):
-            diff = sums[day_id + 1] - sums[day_id]
-            diff_sums.append(diff)
-        diff_sums = np.array(diff_sums)
+        sums_len = sums.size
+        diff_sums_len = sums_len - 1
 
-        return np.array(diff_sums)
+        diff_sums = np.zeros(diff_sums_len)
+        for day_id in range(diff_sums_len):
+            diff_sums[day_id] = sums[day_id + 1] - sums[day_id]
+
+        return diff_sums
     
     def calcConvSeries(self) -> np.ndarray:
         """Рассчитывает разницу конвергенций"""
         # расчет конвергенции (для каждой единицы времени)
-        convs = []
-        conv_calculator = ConvCalculator(self.regdata)
-        for day_id in range(self.start_day, self.end_day):
-            convdata = self.data_loader.getConvData(day_id, self.regdata.id)
-            conv_value = conv_calculator(convdata)
-            convs.append(conv_value)
+        convs = np.zeros(self.end_day - self.start_day + 1)
 
-        return np.array(convs)
+        for day_id in range(self.start_day, self.end_day + 1):
+            convdata = self.data_loader.getConvData(day_id, self.regdata.id)
+            convs[day_id - self.start_day] = self.conv_calculator(convdata)
+
+        return convs
 
     def calcBalanceSeries(self) -> np.ndarray:
         """Рассчитывает временной ряд баланса"""
@@ -318,6 +324,7 @@ class BalanceCalculator():
         diff_sums = self.calcSumsDiffSeries()
         convs =self.calcConvSeries()
 
+        convs = np.delete(convs, -1)
         if diff_sums.shape != convs.shape:
             raise Exception("diff_summs and convs have different shape")
         
