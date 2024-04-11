@@ -133,7 +133,7 @@ class DataLoader():
             start=correct_start_day,
             end=correct_end_day,
             seconds=self.seconds_step,
-            time_series=self._original_time_series[start_id : end_id + 1]
+            time_series=self._original_time_series[start_id : end_id + 1].reset_index(drop=True)
         )
 
     # def getDefaultRegionId(self) -> Id:

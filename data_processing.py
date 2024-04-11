@@ -286,8 +286,12 @@ class BalanceCalculator():
 
     def calcSumSeries(self) -> np.ndarray:
         """Рассчитывает временной ряд сумм содержания вещества в регионе"""
-        start_id, end_id = self.date_range.start_id, self.date_range.end_id
-        sums = np.zeros(end_id - start_id + 1)
+    
+        # рассчитываем на одно значение больше, потому что надо вычитать
+        # каждое предыдущее из следующего, так что массив изменения массы
+        # будет на 1 меньше
+        start_id, end_id = self.date_range.start_id, self.date_range.end_id + 1
+        sums = np.zeros(self.date_range.timesize + 1)
     
         for time_id in range(start_id, end_id + 1):
             concmap = self.data_loader.getTargetMap(time_id)
@@ -359,7 +363,6 @@ class BalanceCalculator():
         diff_sums = self.calcSumsDiffSeries()
         convs = self.calcConvSeries()
 
-        convs = np.delete(convs, -1)
         balance = self.calcBalanceSeries(diff_sums, convs)
 
         return balance
