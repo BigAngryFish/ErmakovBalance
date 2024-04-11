@@ -17,23 +17,15 @@ class DataLoader():
         self.time_variable = "stime"
 
         self.original_shape = self._db[target_name].shape
-        # self.transposed_shape = (
-        #     self.original_shape[1],
-        #     self.original_shape[0],
-        #     self.original_shape[2],
-        # )
 
         self._verifyData()
 
+        self._original_time_series = self.getOriginTimeSeries()
         self._seconds_step = self.getSecondsStep()
-        self.region_id: Id = self.getDefaultRegionRange()
+
+        # self.region_id: Id = self.getDefaultRegionId()
         self.default_date_range: DateRange = self.getDefaultDateRange()
         self._date_range: DateRange = self.default_date_range
-    
-    # @property
-    # def timedim(self) -> int:
-    #     """Возвращает количество единиц времени"""
-    #     return self.date_range.end_id - self.date_range.start_id + 1
 
     def _verifyData(self) -> None:
         """Проверяет полученные данные"""
@@ -82,9 +74,9 @@ class DataLoader():
     
     def getSecondsStep(self) -> int:
         """Рассчитывает шаг времени в секундах"""
-        first_day = self._stimeToDate(self._db[self.time_variable][0])
-        second_day = self._stimeToDate(self._db[self.time_variable][1])
-        _seconds_step = (second_day - first_day).total_seconds()
+        _seconds_step = (
+            self._original_time_series[1] - self._original_time_series[0]
+        ).total_seconds()
         return int(_seconds_step)
 
     def getDefaultDateRange(self) -> DateRange:
@@ -99,24 +91,31 @@ class DataLoader():
             start=start_day, end=end_day,
             start_id=start_id, end_id=end_id,
             seconds=self.seconds_step,
+            time_series=self._original_time_series
         )
 
         return date_data
     
-    def getTimeId(self, daytime: datetime) -> int:
-        """Находит индекс ближайшего времени"""
+    def getOriginTimeSeries(self) -> pd.Series:
+        """Получает исходные времена в формате pandas.Series"""
         # список времен в оригинальном формате
-        original_daytimes = list(self._db[self.time_variable])
+        original_times = list(self._db[self.time_variable])
 
-        # тот же список времен в формате datetime
-        daytimes = list(map(self._stimeToDate, original_daytimes))
+        # тот же времена в формате datetime в формате pandas.Series
+        time_series = pd.Series(map(self._stimeToDate, original_times))
+        
+        return time_series
+
+    def getTimeId(self, time: datetime) -> int:
+        """Находит индекс ближайшего времени"""
 
         # массив с модулем разниц времен от переданного времени, в секундах
-        iter_seconds_diffs = map(lambda x: (daytime - x).total_seconds(), daytimes)
-        seconds_diff = np.abs(np.fromiter(iter_seconds_diffs, dtype=np.int32))
+        diff = self._original_time_series.apply(
+            lambda timeunit: (time - timeunit).total_seconds()
+        ).abs()
 
         # находим индекс минимального значения - это и есть индекс ближайшей даты
-        min_id = int(np.argmin(seconds_diff))
+        min_id = int(diff.argmin())
 
         return min_id
     
@@ -134,17 +133,18 @@ class DataLoader():
             start=correct_start_day,
             end=correct_end_day,
             seconds=self.seconds_step,
+            time_series=self._original_time_series[start_id : end_id + 1]
         )
 
-    def getDefaultRegionRange(self) -> Id:
-        """Дефолтный регион - вся область"""
-        region_id = Id(
-            left=0,
-            right=self.original_shape[1],
-            up=0,
-            down=self.original_shape[0],
-        )
-        return region_id
+    # def getDefaultRegionId(self) -> Id:
+    #     """Дефолтный регион - вся область"""
+    #     region_id = Id(
+    #         left=0,
+    #         right=self.original_shape[1],
+    #         up=0,
+    #         down=self.original_shape[0],
+    #     )
+    #     return region_id
 
     @staticmethod
     def _stimeToDate(stime: bytes) -> datetime:

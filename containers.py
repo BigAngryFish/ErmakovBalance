@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import h5netcdf
 
 from dataclasses import dataclass
@@ -125,9 +126,13 @@ class DateRange():
 
     start: datetime
     end: datetime
+
     start_id: int
     end_id: int
+
     seconds: int
+
+    time_series: pd.Series
 
     def __post_init__(self) -> None:
         """Рассчитываемые аттрибуты"""
