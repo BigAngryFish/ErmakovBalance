@@ -62,25 +62,30 @@ def pwv(str):
 
 def conv(str):
     f = h5netcdf.File(str, "r")
- 
+
+    print(f"l: {id_left}, r: {id_right}, d: {id_down}, u: {id_up}")
+    
     # ИВС по границам
-    pwv_r = np.array([np.transpose(np.array(f['PWV'][...,i]))[id_up:id_down+1,id_right] for i in range(f['PWV'].shape[2])])
-    pwv_l = np.array([np.transpose(np.array(f['PWV'][...,i]))[id_up:id_down+1,id_left] for i in range(f['PWV'].shape[2])])
-    pwv_d = np.array([np.transpose(np.array(f['PWV'][...,i]))[id_down,id_left:id_right+1] for i in range(f['PWV'].shape[2])])
-    pwv_u = np.array([np.transpose(np.array(f['PWV'][...,i]))[id_up,id_left:id_right+1] for i in range(f['PWV'].shape[2])])
+    pwv_r = np.array([np.transpose(np.array(f['PWV'][...,0]))[id_up:id_down+1,id_right]])
+    pwv_d = np.array([np.transpose(np.array(f['PWV'][...,0]))[id_down,id_left:id_right+1]])
+    pwv_l = np.array([np.transpose(np.array(f['PWV'][...,0]))[id_up:id_down+1,id_left]])
+    pwv_u = np.array([np.transpose(np.array(f['PWV'][...,0]))[id_up,id_left:id_right+1]])
     
     # U по границам
-    u_r = np.array([np.transpose(np.array(f['U'][...,i]))[id_up:id_down+1,id_right] for i in range(f['U'].shape[2])])
-    u_l = np.array([np.transpose(np.array(f['U'][...,i]))[id_up:id_down+1,id_left] for i in range(f['U'].shape[2])])
+    u_r = np.array([np.transpose(np.array(f['U'][...,0]))[id_up:id_down+1,id_right]])
+    u_l = np.array([np.transpose(np.array(f['U'][...,0]))[id_up:id_down+1,id_left]])
 
     # V по границам
-    v_d = np.array([np.transpose(np.array(f['V'][...,i]))[id_down,id_left:id_right+1] for i in range(f['V'].shape[2])])
-    v_u = np.array([np.transpose(np.array(f['V'][...,i]))[id_up,id_left:id_right+1] for i in range(f['V'].shape[2])])
+    v_d = np.array([np.transpose(np.array(f['V'][...,0]))[id_down,id_left:id_right+1]])
+    v_u = np.array([np.transpose(np.array(f['V'][...,0]))[id_up,id_left:id_right+1]])
 
     q_l = pwv_l * u_l
     q_r = pwv_r * u_r
     q_d = pwv_d * v_d
     q_u = pwv_u * v_u
+
+    print(q_l)
+
 
     inner = []
     out = []

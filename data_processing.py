@@ -285,7 +285,6 @@ class BalanceCalculator():
 
     def calcSumSeries(self) -> np.ndarray:
         """Рассчитывает временной ряд сумм содержания вещества в регионе"""
-        # расчет сумм
         sums = np.zeros(self.end_day - self.start_day + 1)
     
         for day_id in range(self.start_day, self.end_day + 1):
@@ -318,14 +317,33 @@ class BalanceCalculator():
 
         return convs
 
-    def calcBalanceSeries(self) -> np.ndarray:
+    @staticmethod
+    def calcBalanceSeries(diff_sums: np.ndarray, convs: np.ndarray) -> np.ndarray:
+        """
+        Рассчитывает временной ряд баланса
+
+        :param diff_sums:  временной ряд,  изменение в суммарном содержании  вещества  на
+            единицу времени
+        :type diff_sums: 1D массив numpy
+        :param convs:  временной ряд,  конвергенция  вещества  через  границы  региона на
+            единицу времени
+        :type convs: 1D массив numpy
+        """
+        if diff_sums.ndim != convs.ndim != 1:
+            raise ValueError("'diff_sums' and 'convs' must be 1-dimensional arrays")
+
+        if diff_sums.size != convs.size:
+            raise ValueError("'diff_summs' and 'convs' have different size")
+        
+        return diff_sums - convs
+
+    def getBalanceSeries(self) -> np.ndarray:
         """Рассчитывает временной ряд баланса"""
 
         diff_sums = self.calcSumsDiffSeries()
         convs =self.calcConvSeries()
 
         convs = np.delete(convs, -1)
-        if diff_sums.shape != convs.shape:
-            raise Exception("diff_summs and convs have different shape")
-        
-        return diff_sums - convs
+        balance = self.calcBalanceSeries(diff_sums, convs)
+
+        return balance
