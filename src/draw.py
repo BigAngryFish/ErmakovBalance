@@ -4,7 +4,7 @@ from math import sqrt
 
 from dataclasses import dataclass
 
-from data_processing import Region
+from src.data_processing import Region
 
 class Field():
 

@@ -1,12 +1,23 @@
 import math
+from enum import Enum
 
-from containers import *
-from constants import *
+from src.containers import *
+from src.constants import *
+
+
+class Mode(Enum):
+    """Константы режимов работы функций"""
+    TOTAL = 0
+    SEP = 1
+    ARRAY = 2
+    DF = 3
 
 
 def verifyMap(data_map: np.ndarray) -> None:
     """"Проверяет размерность карты"""
     return None
+    #TODO у меня другая размерность, так что пришлось отключить эту функцию
+
     # if not isinstance(data_map, np.ndarray):
     #     raise TypeError(f"expected numpy.ndarray for 'data_map")
 
@@ -15,6 +26,11 @@ def verifyMap(data_map: np.ndarray) -> None:
 
     # if data_map.shape != MAP_SIZE:    
     #     raise ValueError(f"'data_map' must have shape of {MAP_SIZE}")
+
+
+# shifts = ((np.arange(0, 55, 5)) -25 ) / -10
+# heights = shifts + REGION.height
+# widths = shifts + REGION.width
 
 
 class CoordTools():

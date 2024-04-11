@@ -2,7 +2,7 @@ import numpy as np
 import h5netcdf
 from datetime import date, datetime
 
-from containers import *
+from src.containers import *
 
 
 class DataLoader():
@@ -135,16 +135,6 @@ class DataLoader():
             seconds=self.seconds_step,
             time_series=self._original_time_series[start_id : end_id + 1].reset_index(drop=True)
         )
-
-    # def getDefaultRegionId(self) -> Id:
-    #     """Дефолтный регион - вся область"""
-    #     region_id = Id(
-    #         left=0,
-    #         right=self.original_shape[1],
-    #         up=0,
-    #         down=self.original_shape[0],
-    #     )
-    #     return region_id
 
     @staticmethod
     def _stimeToDate(stime: bytes) -> datetime:

@@ -98,7 +98,7 @@ class Region:
         центром данного региона, и возвращает результат
         """
         return self.regionAroundCenter(self.center, height, width)
-
+    
 
 @dataclass
 class Id:
