@@ -121,9 +121,15 @@ class ConvValue():
 
 
 @dataclass
-class DateData():
+class DateRange():
+
     start: datetime
     end: datetime
     start_id: int
     end_id: int
     seconds: int
+
+    def __post_init__(self) -> None:
+        """Рассчитываемые аттрибуты"""
+        # единиц времени
+        self.timesize = self.end_id - self.start_id + 1

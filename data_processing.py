@@ -184,7 +184,7 @@ class SumCalculator():
 
 class ConvCalculator():
     #TODO секунды - затычка
-    def __init__(self, regdata: RegionData, seconds: int = 3 * 3600) -> None:
+    def __init__(self, regdata: RegionData, seconds: int) -> None:
         """Инициализация"""
 
         self.regdata: RegionData = regdata
@@ -273,25 +273,40 @@ class ConvCalculator():
 
 class BalanceCalculator():
 
-    def __init__(self, regdata: RegionData, data_loader: DataLoader, date_range: tuple) -> None:
+    def __init__(self, regdata: RegionData, data_loader: DataLoader, date_range: DateRange) -> None:
         """Инициализация"""
+        self._verifyParams(regdata, data_loader, date_range)
 
         self.regdata: RegionData = regdata
         self.data_loader: DataLoader = data_loader
-        self.start_day, self.end_day = date_range
+        self.date_range: DateRange = date_range
     
         self.sum_calculator = SumCalculator(self.regdata)
-        self.conv_calculator = ConvCalculator(self.regdata)
+        self.conv_calculator = ConvCalculator(self.regdata, self.date_range.seconds)
 
     def calcSumSeries(self) -> np.ndarray:
         """Рассчитывает временной ряд сумм содержания вещества в регионе"""
-        sums = np.zeros(self.end_day - self.start_day + 1)
+        start_id, end_id = self.date_range.start_id, self.date_range.end_id
+        sums = np.zeros(end_id - start_id + 1)
     
-        for day_id in range(self.start_day, self.end_day + 1):
-            concmap = self.data_loader.getTargetMap(day_id)
-            sums[day_id - self.start_day] = self.sum_calculator(concmap)
+        for time_id in range(start_id, end_id + 1):
+            concmap = self.data_loader.getTargetMap(time_id)
+            sums[time_id - start_id] = self.sum_calculator(concmap)
     
         return sums
+    
+    @staticmethod
+    def _verifyParams(regdata: RegionData, data_loader: DataLoader, date_range: DateRange) -> None:
+        """Проверка аргументов"""
+
+        if not isinstance(regdata, RegionData):
+            raise ValueError(f"'regdata' must be RegionData instance, got {type(regdata)}")
+
+        if not isinstance(data_loader, DataLoader):
+            raise ValueError(f"'data_loader' must be DataLoader instance, got {type(data_loader)}")
+
+        if not isinstance(date_range, DateRange):
+            raise ValueError(f"'date_range' must be DateRange instance, got {type(date_range)}")
 
     def calcSumsDiffSeries(self) -> np.ndarray:
         """Рассчитывает разницу сумм концетраций"""
@@ -301,19 +316,20 @@ class BalanceCalculator():
         diff_sums_len = sums_len - 1
 
         diff_sums = np.zeros(diff_sums_len)
-        for day_id in range(diff_sums_len):
-            diff_sums[day_id] = sums[day_id + 1] - sums[day_id]
+        for time_id in range(diff_sums_len):
+            diff_sums[time_id] = sums[time_id + 1] - sums[time_id]
 
         return diff_sums
     
     def calcConvSeries(self) -> np.ndarray:
         """Рассчитывает разницу конвергенций"""
         # расчет конвергенции (для каждой единицы времени)
-        convs = np.zeros(self.end_day - self.start_day + 1)
+        start_id, end_id = self.date_range.start_id, self.date_range.end_id
+        convs = np.zeros(end_id - start_id + 1)
 
-        for day_id in range(self.start_day, self.end_day + 1):
+        for day_id in range(start_id, end_id + 1):
             convdata = self.data_loader.getConvData(day_id, self.regdata.id)
-            convs[day_id - self.start_day] = self.conv_calculator(convdata)
+            convs[day_id - start_id] = self.conv_calculator(convdata)
 
         return convs
 
@@ -341,7 +357,7 @@ class BalanceCalculator():
         """Рассчитывает временной ряд баланса"""
 
         diff_sums = self.calcSumsDiffSeries()
-        convs =self.calcConvSeries()
+        convs = self.calcConvSeries()
 
         convs = np.delete(convs, -1)
         balance = self.calcBalanceSeries(diff_sums, convs)
