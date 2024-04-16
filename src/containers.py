@@ -7,6 +7,8 @@ import h5netcdf
 from dataclasses import dataclass
 from datetime import datetime
 
+from src.data_loading import DataLoader
+
 
 class Region:
     """Класс для хранения координат региона"""
@@ -223,3 +225,27 @@ class DateRange():
         """Рассчитываемые аттрибуты"""
         # единиц времени
         self.timesize = self.end_id - self.start_id + 1
+
+
+@dataclass
+class BalanceData():
+    reg_data: RegionData
+    data: DataLoader
+
+
+@dataclass
+class RegionBalance():
+    """Баланс данного региона"""
+    region: Region
+    balance: np.ndarray
+
+
+@dataclass
+class HeapOfBalances():
+    """
+    Контейнер для хранения датафрейма с балансами для регионов одного размера,  сдвинутых
+    относительно друг друга
+    """
+    balances: list[RegionBalance]
+    height: int
+    width: int

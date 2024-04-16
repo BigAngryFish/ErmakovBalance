@@ -28,11 +28,6 @@ def verifyMap(data_map: np.ndarray) -> None:
     #     raise ValueError(f"'data_map' must have shape of {MAP_SIZE}")
 
 
-# shifts = ((np.arange(0, 55, 5)) -25 ) / -10
-# heights = shifts + REGION.height
-# widths = shifts + REGION.width
-
-
 class CoordTools():
     """Класс с функциями для работы с координатами"""
 

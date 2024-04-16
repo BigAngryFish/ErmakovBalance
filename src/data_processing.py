@@ -146,12 +146,8 @@ class SumCalculator():
         пространственная информация о регионе    
     """
 
-    def __init__(self, regdata: RegionData) -> None:
-        """Инициализация"""
-
-        self.regdata: RegionData = regdata
-
-    def calcSum(self, data_map: np.ndarray) -> float:
+    @staticmethod
+    def calcSum(data_map: np.ndarray, regdata: RegionData) -> float:
         """
         Рассчитывает сумму в регионе и возвращает результат
 
@@ -167,8 +163,8 @@ class SumCalculator():
         """
         verifyMap(data_map)
 
-        region_id = self.regdata.id
-        cellareas = self.regdata.cellareas
+        region_id = regdata.id
+        cellareas = regdata.cellareas
 
         values_in_points: np.ndarray = data_map[
             region_id.up : region_id.down + 1,
@@ -178,22 +174,15 @@ class SumCalculator():
         total_sum = (cellareas * values_in_points).sum()
         return float(total_sum)
     
-    def __call__(self, data_map: np.ndarray) -> float:
-        return self.calcSum(data_map)
+    def __call__(self, data_map: np.ndarray, regdata: RegionData) -> float:
+        return self.calcSum(data_map, regdata)
 
 
 class ConvCalculator():
-    #TODO секунды - затычка
-    def __init__(self, regdata: RegionData, seconds: int) -> None:
-        """Инициализация"""
-
-        self.regdata: RegionData = regdata
-        self.seconds: int = seconds
     
-    def getConvValue(self, conc: ConvConc, flow: ConvFlow) -> ConvValue:
+    @staticmethod
+    def getConvValue(conc: ConvConc, flow: ConvFlow, cell: Cell) -> ConvValue:
         """Рассчитывает потоки через границы"""
-        cell = self.regdata.cell
-
         # значение унесенного/ принесенного вещества (кг / м2) * (м / c) * м
         right_value_flow = conc.right * flow.right * cell.right
         left_value_flow = conc.left * flow.left * cell.left
@@ -231,7 +220,12 @@ class ConvCalculator():
         )
         return outcome
 
-    def calcConv(self, convdata: ConvOriginalDayData, mode: Mode = Mode.TOTAL) -> float | tuple:
+    def calcConv(self,
+                 convdata: ConvOriginalDayData,
+                 regdata: RegionData,
+                 seconds: int,
+                 mode: Mode = Mode.TOTAL,
+                ) -> float | tuple:
         """
         Рассчитывает конвергенция в регионе для одного дня
 
@@ -242,10 +236,10 @@ class ConvCalculator():
             Mode.SEP - кортеж (income, outcome) со значениями вноса и выноса вещества
         :type mode: Mode
         """
-        values = self.getConvValue(convdata.conc, convdata.flow)
+        values = self.getConvValue(convdata.conc, convdata.flow, regdata.cell)
 
-        income = self.calcIncome(values) * self.seconds
-        outcome = self.calcOutcome(values) * self.seconds
+        income = self.calcIncome(values) * seconds
+        outcome = self.calcOutcome(values) * seconds
 
         if mode == Mode.SEP:
             return income, outcome
@@ -256,7 +250,12 @@ class ConvCalculator():
         else:
             raise ValueError("invalid 'mode'") 
 
-    def __call__(self, convdata: ConvOriginalDayData, mode: Mode = Mode.TOTAL) -> float | tuple:
+    def __call__(self,
+                 convdata: ConvOriginalDayData,
+                 regdata: RegionData,
+                 seconds: int,
+                 mode: Mode = Mode.TOTAL,
+                ) -> float | tuple:
         """
         Рассчитывает конвергенция в регионе для одного дня
 
@@ -267,7 +266,7 @@ class ConvCalculator():
             Mode.SEP - кортеж (income, outcome) со значениями вноса и выноса вещества
         :type mode: Mode
         """
-        return self.calcConv(convdata, mode)
+        return self.calcConv(convdata, regdata, seconds, mode)
 
 
 class BalanceCalculator():
@@ -309,16 +308,10 @@ class BalanceCalculator():
     >>> balance = balance_calculator.getBalanceSeries()
     """
 
-    def __init__(self, regdata: RegionData, data_loader: DataLoader, date_range: DateRange) -> None:
+    def __init__(self) -> None:
         """Инициализация"""
-        self._verifyParams(regdata, data_loader, date_range)
-
-        self.regdata: RegionData = regdata
-        self.data_loader: DataLoader = data_loader
-        self.date_range: DateRange = date_range
-    
-        self.sum_calculator = SumCalculator(self.regdata)
-        self.conv_calculator = ConvCalculator(self.regdata, self.date_range.seconds)
+        self.sum_calculator = SumCalculator()
+        self.conv_calculator = ConvCalculator()
     
     @staticmethod
     def _verifyParams(regdata: RegionData, data_loader: DataLoader, date_range: DateRange) -> None:
@@ -333,24 +326,30 @@ class BalanceCalculator():
         if not isinstance(date_range, DateRange):
             raise ValueError(f"'date_range' must be DateRange instance, got {type(date_range)}")
 
-    def calcSumSeries(self) -> np.ndarray:
+    def calcSumSeries(self, balance_data: BalanceData) -> np.ndarray:
         """Рассчитывает временной ряд сумм содержания вещества в регионе"""
+    
+        # данные, необходимые для расчета
+        regdata = balance_data.reg_data
+        data_loader = balance_data.data
+        date_range = data_loader.date_range
     
         # рассчитываем на одно значение больше, потому что надо вычитать
         # каждое предыдущее из следующего, так что массив изменения массы
         # будет на 1 меньше
-        start_id, end_id = self.date_range.start_id, self.date_range.end_id + 1
-        sums = np.zeros(self.date_range.timesize + 1)
+        start_id, end_id = date_range.start_id, date_range.end_id + 1
+        sums = np.zeros(date_range.timesize + 1)
     
         for time_id in range(start_id, end_id + 1):
-            concmap = self.data_loader.getTargetMap(time_id)
-            sums[time_id - start_id] = self.sum_calculator(concmap)
+            concmap = data_loader.getTargetMap(time_id)
+            sums[time_id - start_id] = self.sum_calculator(concmap, regdata)
     
         return sums
 
-    def calcSumsDiffSeries(self) -> np.ndarray:
+    @staticmethod
+    def calcSumsDiffSeries(sums: np.ndarray) -> np.ndarray:
         """Рассчитывает разницу сумм концетраций"""
-        sums = self.calcSumSeries()
+        # sums = self.calcSumSeries()
 
         sums_len = sums.size
         diff_sums_len = sums_len - 1
@@ -361,15 +360,21 @@ class BalanceCalculator():
 
         return diff_sums
     
-    def calcConvSeries(self) -> np.ndarray:
+    def calcConvSeries(self, balance_data: BalanceData) -> np.ndarray:
         """Рассчитывает разницу конвергенций"""
+
+        # данные, необходимые для расчета
+        regdata = balance_data.reg_data
+        data_loader = balance_data.data
+        date_range = data_loader.date_range
+
         # расчет конвергенции (для каждой единицы времени)
-        start_id, end_id = self.date_range.start_id, self.date_range.end_id
+        start_id, end_id = date_range.start_id, date_range.end_id
         convs = np.zeros(end_id - start_id + 1)
 
         for day_id in range(start_id, end_id + 1):
-            convdata = self.data_loader.getConvData(day_id, self.regdata.id)
-            convs[day_id - start_id] = self.conv_calculator(convdata)
+            convdata =data_loader.getConvData(day_id, regdata.id)
+            convs[day_id - start_id] = self.conv_calculator(convdata, regdata, date_range.seconds)
 
         return convs
 
@@ -409,7 +414,7 @@ class BalanceCalculator():
 
         return df
 
-    def getBalanceSeries(self, mode: Mode = Mode.ARRAY) -> np.ndarray | pd.DataFrame:
+    def getBalanceSeries(self, data: BalanceData, mode: Mode = Mode.ARRAY) -> np.ndarray | pd.DataFrame:
         """
         Рассчитывает временной ряд баланса
         
@@ -421,10 +426,13 @@ class BalanceCalculator():
         :return: временной ряд баланса
         :rtype: np.ndarray | pd.DataFrame
         """
-
-        diff_sums = self.calcSumsDiffSeries()
+        # расчет сумм
+        sums = self.calcSumSeries(data)
+        diff_sums = self.calcSumsDiffSeries(sums)
+        # расчет конвергенции
         convs = self.calcConvSeries()
 
+        # расчет баланса
         balance = self.calcBalanceSeries(diff_sums, convs)
 
         if mode == Mode.ARRAY:
@@ -432,3 +440,18 @@ class BalanceCalculator():
         
         elif mode == Mode.DF:
             return self.makeBalanceDF(balance)
+    
+    def calcRegionBalance(self, region: Region, data: DataLoader) -> RegionBalance:
+        """Рассчитывает баланс для данного региона"""
+        # обрабатываем регион
+        grid = data.getGrid()
+        processor = RegionProcessor(region, grid)
+        regdata = processor.getRegionData()
+
+        balance_data = BalanceData(reg_data=regdata, data=data)
+        balance = self.getBalanceSeries(data)
+
+        return RegionBalance(region, balance)
+   
+    def __call__(self, data: BalanceData, mode: Mode = Mode.ARRAY) -> np.ndarray | pd.DataFrame:
+        self.getBalanceSeries(data, mode)
