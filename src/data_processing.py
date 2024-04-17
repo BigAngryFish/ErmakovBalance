@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.tools import CoordTools, Mode, verifyMap
-from src.data_loading import  DataLoader
+from src.data_loading import  DataLoader, BalanceData
 from src.containers import *
 from src.constants import *
 
@@ -430,7 +430,7 @@ class BalanceCalculator():
         sums = self.calcSumSeries(data)
         diff_sums = self.calcSumsDiffSeries(sums)
         # расчет конвергенции
-        convs = self.calcConvSeries()
+        convs = self.calcConvSeries(data)
 
         # расчет баланса
         balance = self.calcBalanceSeries(diff_sums, convs)
@@ -449,7 +449,7 @@ class BalanceCalculator():
         regdata = processor.getRegionData()
 
         balance_data = BalanceData(reg_data=regdata, data=data)
-        balance = self.getBalanceSeries(data)
+        balance = self.getBalanceSeries(balance_data)
 
         return RegionBalance(region, balance)
    

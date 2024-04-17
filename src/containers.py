@@ -7,8 +7,6 @@ import h5netcdf
 from dataclasses import dataclass
 from datetime import datetime
 
-from src.data_loading import DataLoader
-
 
 class Region:
     """Класс для хранения координат региона"""
@@ -227,10 +225,13 @@ class DateRange():
         self.timesize = self.end_id - self.start_id + 1
 
 
-@dataclass
-class BalanceData():
-    reg_data: RegionData
-    data: DataLoader
+# Look for this class at src.data_loading module
+# It has been transferred there to avoid circular import
+
+# @dataclass
+# class BalanceData():
+#     reg_data: RegionData
+#     data: DataLoader
 
 
 @dataclass
