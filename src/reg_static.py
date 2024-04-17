@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from src.data_loading import DataLoader
-from src.containers import Region, BalanceData, RegionBalance, HeapOfBalances
-from src.data_processing import RegionProcessor, BalanceCalculator
-from src.tools import Mode
+from src.data_loading import DataLoader, BalanceData
+from src.containers import Region, HeapOfBalances
+from src.data_processing import BalanceCalculator
 
 
 class StaticMaker():
@@ -25,9 +24,11 @@ class StaticMaker():
         balances = []
         for lat_shift in step_shifts:
             for lon_shift in step_shifts:
-                working_region = center_region.addCords(lat_shift, lon_shift)
+                working_region = center_region.addCoords(lat_shift, lon_shift)
                 balance = self.bal_calc.calcRegionBalance(working_region, data)
                 balances.append(balance)
+                break # TODO
+            break # TODO
         
         return HeapOfBalances(balances, center_region.height, center_region.width)
 
@@ -47,6 +48,6 @@ class StaticMaker():
         for height, width in zip(heights, widths):
             center_region = region.centralizeRegion(height, width)
             balances[count] = self.calcHeapOfBalances(center_region, data)
-            break
+            break #TODO
         
         return balances

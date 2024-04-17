@@ -1,8 +1,11 @@
 import numpy as np
+import pandas as pd
 import h5netcdf
-from datetime import date, datetime
 
-from src.containers import *
+from datetime import date, datetime
+from dataclasses import dataclass
+
+from src.containers import DateRange, Grid, ConvConc, ConvFlow, Id, ConvOriginalDayData, RegionData
 
 
 class DataLoader():
@@ -229,3 +232,9 @@ class DataLoader():
     def close(self) -> None:
         """Закрытие базы данных"""
         self._db.close()
+
+
+@dataclass
+class BalanceData():
+    reg_data: RegionData
+    data: DataLoader
